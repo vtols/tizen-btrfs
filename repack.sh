@@ -44,6 +44,41 @@ function repack_image() {
         sed -i 's/LABEL=system-data/\/dev\/mmcblk0p3/' dst_mnt/etc/fstab
         sed -i 's/LABEL=user/\/dev\/mmcblk0p5/'        dst_mnt/etc/fstab
         cat dst_mnt/etc/fstab
+
+        #Btrfs executable for armv7l from btrfs-progs
+        if [ "$btrfs_bin" == "btrfs" ]; then
+            message "Edit disk resize services"
+            bw_prefix=dst_mnt/usr/lib/systemd/system/basic.target.wants
+            rm -v   ${bw_prefix}/resize2fs@*.service
+            ln -srv ${bw_prefix}/../resize2fs@.service \
+                    ${bw_prefix}/resize2fs@dev-mmcblk0p2.service
+            ln -srv ${bw_prefix}/../resize2fs@.service \
+                    ${bw_prefix}/resize2fs@dev-mmcblk0p3.service
+            ln -srv ${bw_prefix}/../resize2fs@.service \
+                    ${bw_prefix}/resize2fs@dev-mmcblk0p5.service
+            ls -l   ${bw_prefix}
+
+
+            message "Edit systemd resize2fs@.service unit"
+            sed -i 's/resize2fs -f/btrfs_resize/' \
+                    ${bw_prefix}/../resize2fs@.service
+            cat ${bw_prefix}/../resize2fs@.service
+
+            #Device->mountpoint: lsblk -o MOUNTPOINT -nr /dev/mmcblk0pX
+            cat <<EOF > dst_mnt/sbin/btrfs_resize
+#!/bin/bash
+
+device=\$1
+mountpoint=$(/bin/lsblk -o MOUNTPOINT -nr \$device)
+/sbin/btrfs filesystem resize max \$mountpoint
+EOF
+            chmod +x dst_mnt/sbin/btrfs_resize
+            message "Written auxiliary script"
+            cat dst_mnt/sbin/btrfs_resize
+
+            message "Install btrfs tool from file ${2}"
+            cp ${workdir}/${btrfs_bin} dst_mnt/sbin
+        fi
     fi
 
     message "Unmount source and destination images"
@@ -60,6 +95,7 @@ check_btrfs
 workdir=$(pwd)
 
 snapshot=$1
+btrfs_bin=$2
 message "Repacking ${snapshot}"
 
 name=$(echo $snapshot | sed -e s/.tar.gz//)
