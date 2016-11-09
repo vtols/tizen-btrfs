@@ -23,7 +23,7 @@ function repack_image() {
     dst_image=btrfs/${src_image}
     sz=$(stat --format=%s ${src_image})
     new_sz=$((${sz}*2))
-    
+
     message "Create new btrfs image for ${image}"
     fallocate --length=${new_sz} ${dst_image}
     mkfs.btrfs $dst_image #--label=${fs_label}
@@ -32,17 +32,19 @@ function repack_image() {
     src_dev=$(losetup --find --show ${src_image})
     dst_dev=$(losetup --find --show ${dst_image})
     mount $src_dev src_mnt
-    mount $dst_dev dst_mnt
-    
+    mount -o "compress=${comp_alg}" $dst_dev dst_mnt
+
     message "Copying ${image} contents..."
     cp -a src_mnt/. dst_mnt
     message "Done.\n"
 
     if [ "$src_image" == "rootfs.img" ]; then
+
         message "Edit /etc/fstab in rootfs.img"
         sed -i 's/ext4/btrfs/'                         dst_mnt/etc/fstab
         sed -i 's/LABEL=system-data/\/dev\/mmcblk0p3/' dst_mnt/etc/fstab
         sed -i 's/LABEL=user/\/dev\/mmcblk0p5/'        dst_mnt/etc/fstab
+        sed -i 's/defaults,noatime/defaults,noatime,compress=${comp_alg}/g' dst_mnt/etc/fstab
         cat dst_mnt/etc/fstab
 
         #Btrfs executable for armv7l from btrfs-progs
@@ -50,12 +52,10 @@ function repack_image() {
             message "Edit disk resize services"
             bw_prefix=dst_mnt/usr/lib/systemd/system/basic.target.wants
             rm -v   ${bw_prefix}/resize2fs@*.service
-            ln -srv ${bw_prefix}/../resize2fs@.service \
-                    ${bw_prefix}/resize2fs@dev-mmcblk0p2.service
-            ln -srv ${bw_prefix}/../resize2fs@.service \
-                    ${bw_prefix}/resize2fs@dev-mmcblk0p3.service
-            ln -srv ${bw_prefix}/../resize2fs@.service \
-                    ${bw_prefix}/resize2fs@dev-mmcblk0p5.service
+            for i in 2 3 5; do
+                ln -srv ${bw_prefix}/../resize2fs@.service \
+                    ${bw_prefix}/resize2fs@dev-mmcblk0p${i}.service
+            done
             ls -l   ${bw_prefix}
 
 
@@ -96,10 +96,21 @@ workdir=$(pwd)
 
 snapshot=$1
 btrfs_bin=$2
-message "Repacking ${snapshot}"
+comp_alg=${3:-no}
+
+if [ $comp_alg = no ]; then
+    message "Repacking ${snapshot}, disabled compression"
+elif [ $comp_alg = zlib ]; then
+    message "Repacking ${snapshot}, enabled ZLIB compression"
+elif [ $comp_alg = lzo ]; then
+    message "Repacking ${snapshot}, enabled LZO compression"
+else
+    message "Unknown compression algo ${comp_alg}, aborting"
+    exit 1
+fi
 
 name=$(echo $snapshot | sed -e s/.tar.gz//)
-new_basename=${name}-btrfs.tar.gz
+new_basename=${name}-btrfs-${comp_alg}.tar.gz
 new_name=${workdir}/${new_basename}
 tmpdir=$(mktemp -d -p .)
 

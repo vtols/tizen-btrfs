@@ -11,10 +11,10 @@ function download_archives() {
     fi
     pushd $ARCH_DIRS
     wget -nc -i ../files.urls
-    mv *boot* boot.tar.gz
-    mv *wayland* firmware.tar.gz
-    mv master.zip apps.zip
-    mv opengl-es-mali-t628.tar.gz opengl.tar.gz
+    cp *boot-armv7* boot.tar.gz
+    cp *wayland* firmware.tar.gz
+    cp master.zip apps.zip
+    cp opengl-es-mali-t628.tar.gz opengl.tar.gz
     popd
 }
 
