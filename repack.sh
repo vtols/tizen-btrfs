@@ -47,38 +47,36 @@ function repack_image() {
         sed -i 's/defaults,noatime/defaults,noatime,compress=${comp_alg}/g' dst_mnt/etc/fstab
         cat dst_mnt/etc/fstab
 
-        #Btrfs executable for armv7l from btrfs-progs
-        if [ "$btrfs_bin" == "btrfs" ]; then
-            message "Edit disk resize services"
-            bw_prefix=dst_mnt/usr/lib/systemd/system/basic.target.wants
-            rm -v   ${bw_prefix}/resize2fs@*.service
-            for i in 2 3 5; do
-                ln -srv ${bw_prefix}/../resize2fs@.service \
-                    ${bw_prefix}/resize2fs@dev-mmcblk0p${i}.service
-            done
-            ls -l   ${bw_prefix}
+        message "Edit disk resize services"
+        bw_prefix=dst_mnt/usr/lib/systemd/system/basic.target.wants
+        rm -v   ${bw_prefix}/resize2fs@*.service
+        for i in 2 3 5; do
+            ln -srv ${bw_prefix}/../resize2fs@.service \
+                ${bw_prefix}/resize2fs@dev-mmcblk0p${i}.service
+        done
+        ls -l   ${bw_prefix}
 
 
-            message "Edit systemd resize2fs@.service unit"
-            sed -i 's/resize2fs -f/btrfs_resize/' \
-                    ${bw_prefix}/../resize2fs@.service
-            cat ${bw_prefix}/../resize2fs@.service
+        message "Edit systemd resize2fs@.service unit"
+        sed -i 's/resize2fs -f/btrfs_resize/' \
+                ${bw_prefix}/../resize2fs@.service
+        cat ${bw_prefix}/../resize2fs@.service
 
-            #Device->mountpoint: lsblk -o MOUNTPOINT -nr /dev/mmcblk0pX
-            cat <<EOF > dst_mnt/sbin/btrfs_resize
+        #Device->mountpoint: lsblk -o MOUNTPOINT -nr /dev/mmcblk0pX
+        cat <<EOF > dst_mnt/sbin/btrfs_resize
 #!/bin/bash
 
 device=\$1
 mountpoint=$(/bin/lsblk -o MOUNTPOINT -nr \$device)
 /sbin/btrfs filesystem resize max \$mountpoint
 EOF
-            chmod +x dst_mnt/sbin/btrfs_resize
-            message "Written auxiliary script"
-            cat dst_mnt/sbin/btrfs_resize
+        chmod +x dst_mnt/sbin/btrfs_resize
+        message "Written auxiliary script"
+        cat dst_mnt/sbin/btrfs_resize
 
-            message "Install btrfs tool from file ${2}"
-            cp ${workdir}/${btrfs_bin} dst_mnt/sbin
-        fi
+        message "Install btrfs tool from file ${2}"
+        #Btrfs executable for armv7l from btrfs-progs
+        cp ${workdir}/btrfs dst_mnt/sbin
     fi
 
     message "Unmount source and destination images"
@@ -95,8 +93,7 @@ check_btrfs
 workdir=$(pwd)
 
 snapshot=$1
-btrfs_bin=$2
-comp_alg=${3:-no}
+comp_alg=${2:-no}
 
 if [ $comp_alg = no ]; then
     message "Repacking ${snapshot}, disabled compression"
