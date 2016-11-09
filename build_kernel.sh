@@ -12,9 +12,15 @@ export CROSS_COMPILE=arm-linux-gnueabihf-
 export CCACHE=ccache
 
 export PATH=${PATH}:${PWD}/toolchain/bin
+ARGS=$@
+
+function message() {
+    echo -e "\033[1m${1}\033[0m"
+}
 
 function clone_repository {
     if ! [ -d $KERNEL_SRC ]; then
+        message "Cloning kernel source repository..."
         git clone \
             --depth=1 \
             -b accepted/tizen_common \
@@ -26,31 +32,39 @@ function clone_repository {
 
 function download_toolchain {
     if ! [ -d $TOOLCHAIN ]; then
+        message "Downloading toolchain"
         wget -nc -O toolchain.tar.xz $TOOLCHAIN_URL
-        tar xvf toolchain.tar.xz
+        message "Unpacking toolchain"
+        tar xf toolchain.tar.xz
         mv gcc-linaro-* toolchain
     fi
 }
 
 function build_kernel {
     cd $KERNEL_SRC
+
     make tizen_odroid_defconfig
-    for arg in $@
+    for arg in $ARGS
     do
-        case arg in
+        case $arg in
             "--btrfs")
+                message "Enabling btrfs support"
                 ./scripts/config \
                     --enable CONFIG_BTRFS_FS \
                     --enable CONFIG_BTRFS_FS_POSIX_ACL 
                 ;;
             "--no-wireless")
+                message "Disabling wireless support"
                 ./scripts/config \
                     --disable CONFIG_CFG80211 \
                     --disable CONFIG_MAC80211 
                 ;;
         esac
     done
-    make -j8 zImage
+    make olddefconfig
+    
+    message "Building kernel"
+    make -j$(($(nproc)+2)) zImage
 }
 
 clone_repository
