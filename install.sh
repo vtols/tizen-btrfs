@@ -5,10 +5,15 @@ ARCH_DIRS=$DIR/archives
 
 boot_disk=$1
 
+function message() {
+    echo -e "\033[1m${1}\033[0m"
+}
+
 function download_archives() {
     if [ ! -d $$ARCH_DIRS ]; then
         mkdir -p $ARCH_DIRS
     fi
+    message "Downloading boot, firmware, opengl drivers and Tizen  sample apps..."
     pushd $ARCH_DIRS
     wget -nc -i ../files.urls
     cp *boot-armv7* boot.tar.gz
@@ -19,7 +24,11 @@ function download_archives() {
 }
 
 function prepare_images {
-    ./repack
+    message "Repacking images..."
+    for algo in no zlib lzo
+    do
+        ./repack firmware.tar.gz $algo
+    done
 }
 
 function fuse_sdcard {
