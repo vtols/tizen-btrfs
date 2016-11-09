@@ -38,3 +38,4 @@ function fuse_sdcard {
 }
 
 download_archives
+prepare_images
