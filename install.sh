@@ -25,10 +25,12 @@ function download_archives() {
 
 function prepare_images {
     message "Repacking images..."
+    pushd $ARCH_DIRS
     for algo in no zlib lzo
     do
-        ./repack firmware.tar.gz $algo
+        ./repack.sh firmware.tar.gz $algo
     done
+    popd
 }
 
 function fuse_sdcard {
