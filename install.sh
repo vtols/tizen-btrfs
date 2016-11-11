@@ -18,19 +18,17 @@ function download_archives() {
     wget -c -i ${DIR}/files.urls
     cp *boot-armv7* boot.tar.gz
     cp *wayland* firmware.tar.gz
-    ln -s firmware.tar.gz firmware-ext4.tar.gz
+    ln -sf firmware.tar.gz firmware-ext4.tar.gz
     cp master.zip apps.zip
     cp opengl-es-mali-t628.tar.gz opengl.tar.gz
     popd
 }
 
 function prepare_images {
-    pushd $ARCHIVES
     if [ ! -e $image ]; then
         message "Repacking image..."
-        ${DIR}/repack.sh ${ARCHIVES}/firmware.tar.gz $comp_algo
+        sudo ${DIR}/repack.sh ${ARCHIVES}/firmware.tar.gz $comp_algo
     fi
-    popd
 }
 
 function fuse_sdcard {
@@ -54,14 +52,15 @@ function parse_options {
     image=${ARCHIVES}/firmware.tar.gz
     for arg in $ARGS
     do
+        echo $arg
         case $arg in
-            "--boot")
+            --boot)
                 FORMAT="--format"
                 boot=${ARCHIVES}/boot.tar.gz
                 ;;
-            "--fs=*")
+            --fs=*)
                 fs_type=$(echo $arg | sed -e 's/--fs=//')
-                if [[ $fs_type =~ "btrfs-(.*)" ]]; then
+                if [[ $fs_type =~ btrfs-(.*) ]]; then
                     btrfs="--btrfs"
                     comp_algo=${BASH_REMATCH[1]}
                 fi

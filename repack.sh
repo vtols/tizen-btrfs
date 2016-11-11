@@ -41,10 +41,10 @@ function repack_image() {
     if [ "$src_image" == "rootfs.img" ]; then
 
         message "Edit /etc/fstab in rootfs.img"
-        sed -i 's/ext4/btrfs/'                         dst_mnt/etc/fstab
-        sed -i 's/LABEL=system-data/\/dev\/mmcblk0p3/' dst_mnt/etc/fstab
-        sed -i 's/LABEL=user/\/dev\/mmcblk0p5/'        dst_mnt/etc/fstab
-        sed -i 's/defaults,noatime/defaults,noatime,compress=${comp_alg}/g' dst_mnt/etc/fstab
+        sed -i "s/ext4/btrfs/"                         dst_mnt/etc/fstab
+        sed -i "s/LABEL=system-data/\/dev\/mmcblk0p3/" dst_mnt/etc/fstab
+        sed -i "s/LABEL=user/\/dev\/mmcblk0p5/"        dst_mnt/etc/fstab
+        sed -i "s/defaults,/defaults,compress=${comp_alg},/" dst_mnt/etc/fstab
         cat dst_mnt/etc/fstab
 
         message "Edit disk resize services"
@@ -67,7 +67,7 @@ function repack_image() {
 #!/bin/bash
 
 device=\$1
-mountpoint=$(/bin/lsblk -o MOUNTPOINT -nr \$device)
+mountpoint=\$(/bin/lsblk -o MOUNTPOINT -nr \$device)
 /sbin/btrfs filesystem resize max \$mountpoint
 EOF
         chmod +x dst_mnt/sbin/btrfs_resize
@@ -113,7 +113,7 @@ esac
 
 name=$(echo $snapshot | sed -e s/.tar.gz//)
 new_basename=${name}-btrfs-${comp_alg}.tar.gz
-new_name=${workdir}/${new_basename}
+new_name=$(readlink -m ${new_basename})
 tmpdir=$(mktemp -d -p .)
 
 message "Unpack original images"
