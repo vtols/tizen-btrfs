@@ -20,10 +20,12 @@ function download_archives() {
 function flash_apps {
     td=$(mktemp -d -p $ARCHIVES)
     message "Unpacking apps..."
-    pushd $td
+    pushd $ARCHIVES
     unzip apps.zip -d $td
+    pushd $td
     message "Pushing apps to odroid..."
     sudo ./patch-demo
+    popd
     popd
     rm -rf $td
 }
@@ -31,10 +33,12 @@ function flash_apps {
 function flash_drivers {
     td=$(mktemp -d -p $ARCHIVES)
     message "Unpacking opengl drivers..."
-    pushd $td
+    pushd $ARCHIVES
     tar zxvf opengl.tar.gz -C $td
+    pushd $td
     message "Pushing opengl drivers to odroid..."
     sudo ./install-set/setup
+    popd
     popd
     rm -rf $td
 }
