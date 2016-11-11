@@ -95,16 +95,21 @@ workdir=$(pwd)
 snapshot=$1
 comp_alg=${2:-no}
 
-if [ $comp_alg = no ]; then
-    message "Repacking ${snapshot}, disabled compression"
-elif [ $comp_alg = zlib ]; then
-    message "Repacking ${snapshot}, enabled ZLIB compression"
-elif [ $comp_alg = lzo ]; then
-    message "Repacking ${snapshot}, enabled LZO compression"
-else
-    message "Unknown compression algo ${comp_alg}, aborting"
-    exit 1
-fi
+case $comp_alg in
+    "no")
+        message "Repacking ${snapshot}, disabled compression"
+        ;;
+    "zlib")
+        message "Repacking ${snapshot}, enabled ZLIB compression"
+        ;;
+    "lzo")
+        message "Repacking ${snapshot}, enabled LZO compression"
+        ;;
+    *)
+        message "Unknown compression algo ${comp_alg}, aborting"
+        exit 1
+        ;;
+esac
 
 name=$(echo $snapshot | sed -e s/.tar.gz//)
 new_basename=${name}-btrfs-${comp_alg}.tar.gz
