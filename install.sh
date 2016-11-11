@@ -13,14 +13,12 @@ function message() {
 
 function download_archives() {
     mkdir -p $ARCHIVES
-    message "Downloading boot, firmware, opengl drivers and Tizen  sample apps..."
+    message "Downloading boot, firmware..."
     pushd $ARCHIVES
-    wget -c -i ${DIR}/files.urls
+    wget -c -i ${DIR}/boot-firmware.urls
     cp *boot-armv7* boot.tar.gz
     cp *wayland* firmware.tar.gz
     ln -sf firmware.tar.gz firmware-ext4.tar.gz
-    cp master.zip apps.zip
-    cp opengl-es-mali-t628.tar.gz opengl.tar.gz
     popd
 }
 
