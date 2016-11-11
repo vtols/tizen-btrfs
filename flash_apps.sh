@@ -22,7 +22,7 @@ function flash_apps {
     message "Unpacking apps..."
     pushd $ARCHIVES
     unzip apps.zip -d $td
-    pushd $td
+    pushd $td/exampleApp-master
     message "Pushing apps to odroid..."
     sudo ./patch-demo
     popd
@@ -35,7 +35,7 @@ function flash_drivers {
     message "Unpacking opengl drivers..."
     pushd $ARCHIVES
     tar zxvf opengl.tar.gz -C $td
-    pushd $td
+    pushd $td/opengl-es-mali-t628
     message "Pushing opengl drivers to odroid..."
     sudo ./install-set/setup
     popd
