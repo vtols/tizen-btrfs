@@ -20,8 +20,8 @@ function download_archives() {
 function flash_apps {
     td=$(mktemp -d -p $ARCHIVES)
     message "Unpacking apps..."
-    unzip apps.zip -d $td
     pushd $td
+    unzip apps.zip -d $td
     message "Pushing apps to odroid..."
     sudo ./patch-demo
     popd
@@ -31,8 +31,8 @@ function flash_apps {
 function flash_drivers {
     td=$(mktemp -d -p $ARCHIVES)
     message "Unpacking opengl drivers..."
-    tar zxvf opengl.tar.gz -C $td
     pushd $td
+    tar zxvf opengl.tar.gz -C $td
     message "Pushing opengl drivers to odroid..."
     sudo ./install-set/setup
     popd
