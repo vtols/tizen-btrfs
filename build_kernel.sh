@@ -1,14 +1,15 @@
 #!/bin/bash
 
-TOOLCHAIN_RELEASE=14.09
-TOOLCHAIN_XZ=gcc-linaro-arm-linux-gnueabihf-4.9-2014.09_linux.tar.xz
-TOOLCHAIN_URL=http://releases.linaro.org/${TOOLCHAIN_RELEASE}/components/toolchain/binaries/${TOOLCHAIN_XZ}
+TOOLCHAIN_RELEASE=latest-5
+TOOLCHAIN_XZ=gcc-linaro-5.3.1-2016.05-x86_64_arm-linux-gnueabi.tar.xz
+TOOLCHAIN_URL=http://releases.linaro.org/components/toolchain/binaries/${TOOLCHAIN_RELEASE}/arm-linux-gnueabi/${TOOLCHAIN_XZ}
 TOOLCHAIN=toolchain/bin
 
 KERNEL_SRC=linux-exynos
 
 export ARCH=arm
-export CROSS_COMPILE=arm-linux-gnueabihf-
+#export CROSS_COMPILE=arm-linux-gnueabihf-
+export CROSS_COMPILE=arm-linux-gnueabi-
 export CCACHE=ccache
 
 export PATH=${PATH}:${PWD}/toolchain/bin
