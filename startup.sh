@@ -1,8 +1,8 @@
 #!/bin/bash
 
 WD=/opt/usr/home/owner
-DELAY=10
-WAIT=30
+DELAY=20
+WAIT=50
 COUNT=4
 if [ $1 ]; then
     COUNT=$1
@@ -55,21 +55,25 @@ EOF
 }
 
 LAUNCH_SET=(
-    #org.example.calculator
-    #org.example.ddktest
-    #org.example.glbasicrenderer
-    #org.example.player
+    org.example.calculator
+    org.example.ddktest
+    org.example.glbasicrenderer
+    org.example.player
     org.tizen.dpm-toolkit
-    #org.tizen.chromium-efl.mini_browser
+    org.tizen.chromium-efl.mini_browser
 )
 
 function launch_stat() {
     #clear_cache
-    for app in $LAUNCH_SET;
+    num_apps=${#LAUNCH_SET[@]}
+    indices=$(seq 0 $(($num_apps-1)))
+    for i in $indices;
     do
-        su --command="launch_app ${app}" owner
-        app_pid=$(ps -C ${app} -o pid=)
-        echo "${app} ${app_pid}" >> $st_dir/pids.txt
+        app_name=${LAUNCH_SET[$i]}
+        su --command="launch_app ${app_name}" owner
+        app_pid=$(ps aux | grep ${app_name} | head -n 1 | awk '{print $2}')
+        #app_pid=$(ps -C ${app} -o pid=)
+        echo "${app_name} ${app_pid}" >> $st_dir/pids.txt
     done
     sleep $WAIT
     dlogutil -d *:D | grep prt_ltime > $st_dir/dlog.txt
@@ -86,4 +90,4 @@ if [ -f counter.txt ]; then
 else
     startup_init
 fi
-sync; reboot
+sync; systemctl reboot
