@@ -35,9 +35,9 @@ function flash_drivers {
     message "Unpacking opengl drivers..."
     pushd $ARCHIVES
     tar zxvf opengl.tar.gz -C $td
-    pushd $td/opengl-es-mali-t628
+    pushd $td/opengl-es-mali-t628/install-set
     message "Pushing opengl drivers to odroid..."
-    sudo ./install-set/setup
+    sudo ./setup
     popd
     popd
     rm -rf $td
