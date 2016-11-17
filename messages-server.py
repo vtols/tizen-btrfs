@@ -3,9 +3,13 @@
 import socket
 import struct
 import threading
+import sys
 
 class MessagesServer:
     def __init__(self):
+        self.log = open('messages.log', 'ab')
+        self.log.write('\n## New session started ##\n'.encode('utf-8'))
+        self.log.flush()
         self.messages = []
         self.messages_lock = threading.Lock()
         self.new_message = None
@@ -15,6 +19,8 @@ class MessagesServer:
         with self.new_message_cv:
             self.messages.append(message)
             self.new_message = message
+            self.log.write(message)
+            self.log.flush()
             self.new_message_cv.notify_all()
 
     def wait_message(self):
@@ -120,18 +126,24 @@ class MessageWait (threading.Thread):
     def stop_waiting(self):
         self.go = False
 
-def run_server(port):
-    server = MessagesServer()
-    server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_sock.bind(('', port))
-    server_sock.listen(5)
+class RunServer (threading.Thread):
+    def __init__(self, port):
+        threading.Thread.__init__(self)
+        self.port = port
 
-    while True:
-        (client_sock, client_addr) = server_sock.accept()
-        #client_sock.settimeout(3)
-        cl = ClientThread(server, client_sock)
-        cl.start()
+    def run(self):
+        server = MessagesServer()
+        server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server_sock.bind(('', self.port))
+        server_sock.listen(5)
+
+        while True:
+            (client_sock, client_addr) = server_sock.accept()
+            #client_sock.settimeout(3)
+            cl = ClientThread(server, client_sock)
+            cl.start()
 
 if __name__ == "__main__":
-    run_server(5353)
+    s = RunServer(5353)
+    s.start()
