@@ -14,7 +14,6 @@ system_start_time = []
 apps_start_time = defaultdict(lambda: [])
 
 for run_dir in data_dir.iterdir():
-    print(run_dir)
     def entries(name):
         lines = (run_dir / name).open().readlines()
         return list(map(str.split, lines))
@@ -23,19 +22,22 @@ for run_dir in data_dir.iterdir():
         return { k: v for [k, v] in entries(name) }
 
     if run_dir.is_dir():
-        pids = entry_map('pids.txt')
-        starts = entry_map('dlog.txt')
-        for name, pid in pids.items():
-            app_time = int(starts[pid]) / 1000
-            apps_start_time[name].append(app_time)
+        #print("Reading", run_dir)
+        try:
+            pids = entry_map('pids.txt')
+            starts = entry_map('dlog.txt')
+            for name, pid in pids.items():
+                app_time = int(starts[pid]) / 1000
+                apps_start_time[name].append(app_time)
 
-        system_time = float(entries('startup.txt')[0][2])
-        system_start_time.append(system_time)
+            system_time = float(entries('startup.txt')[0][2])
+            system_start_time.append(system_time)
+        except:
+            print("Bad data in", run_dir)
 
 def plot_medians(name, y):
     median = np.median(y)
     x = list(range(len(y)))
-    x.reverse()
     y_median = [median for i in x]
     fig, ax = plt.subplots()
     data_line = ax.plot(x, y, label='Time', marker='o')
@@ -44,8 +46,14 @@ def plot_medians(name, y):
     plt.savefig(str(data_dir / (name + '.png')))
     #plt.show()
 
-print(apps_start_time)
-print(system_start_time)
+def plot_density(name, y):
+    plt.figure()
+    plt.hist(y, bins='auto')
+    plt.title(name + " (histogram)")
+    plt.savefig(str(data_dir / (name + '.hist.png')))
+
 plot_medians('sys', system_start_time)
 for name, data in apps_start_time.items():
+    print("Plotting data for", name)
     plot_medians(name, data)
+    plot_density(name, data)
