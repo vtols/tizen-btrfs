@@ -4,39 +4,83 @@ WD=/opt/usr/home/owner
 DELAY=20
 WAIT=30
 COUNT=$1
+DEBUG=1
 
 unit=startup.service
 unit_prefix=/etc/systemd/system
 unit_path=${unit_prefix}/${unit}
 
 function update_counter() {
+    if [ $NEW_DOWN_COUNTER -le 0 ]; then
+        systemctl disable $unit
+        rm downcounter.txt $unit_path startup.sh
+        chown -R owner:users startup
+        make_archive
+        exit
+    fi
+    echo $NEW_COUNTER > counter.txt
+    echo $NEW_DOWN_COUNTER > downcounter.txt
+}
+
+function load_counter() {
     COUNTER=$(cat counter.txt)
+    DOWN_COUNTER=$(cat downcounter.txt)
     st_dir=startup/${COUNTER}
     rm -rf ${st_dir}
     mkdir -p ${st_dir}
-    NEW_COUNTER=$((COUNTER-1))
-    echo $NEW_COUNTER > counter.txt
+    NEW_COUNTER=$((COUNTER+1))
+    NEW_DOWN_COUNTER=$((DOWN_COUNTER-1))
 }
 
-function check_counter() {
-    if [ $NEW_COUNTER -eq 0 ]; then
-        systemctl disable $unit
-        rm counter.txt $unit_path startup.sh
-        chown -R owner:users startup
-        exit
+function make_archive() {
+    pushd startup
+    rm startup.tar.xz
+    tar cvf startup.tar.xz .
+    popd
+}
+
+function debug_echo() {
+    if [ $DEBUG ]; then
+        ./messages.py $SERVER echo "$@"
+    fi
+}
+
+function debug_tee() {
+    if [ $DEBUG ]; then
+        ./messages.py $SERVER tee
+    else
+        cat
+    fi
+}
+
+function debug_cat() {
+    if [ $DEBUG ]; then
+        ./messages.py $SERVER cat
     fi
 }
 
 function startup_stat() {
     sleep $DELAY
+    debug_echo ----------
+    debug_echo \#$COUNTER
+    debug_echo "Left ${DOWN_COUNTER}"
+    # systemd-analyze 2>&1 | debug_tee
     systemd-analyze | awk '{print $4,$7,$10}' | \
-        sed -e 's/s//g' > $st_dir/startup.txt
+        sed -e 's/s//g' | debug_tee > $st_dir/startup.txt
+
+    systemd-analyze plot > $st_dir/plot.svg
 
     dmesg > $st_dir/dmesg.txt
 }
 
 function startup_init() {
-    echo $COUNT > counter.txt
+    if [ ! -f counter.txt ]; then
+        echo 1 > counter.txt
+        rm -rf startup
+    fi
+
+    echo $COUNT > downcounter.txt
+
 
     cat <<EOF > $unit_path
 # path: /etc/systemd/system/startup.service
@@ -79,14 +123,24 @@ function launch_stat() {
     do
         clear_cache
         app_name=${LAUNCH_SET[$i]}
-        su --command="launch_app ${app_name}" owner
-        app_pid=$(ps -C ${BIN_NAMES[$i]} -o pid=)
-        echo "${app_name} ${app_pid}" >> $st_dir/pids.txt
+        bin_name=${BIN_NAMES[$i]}
+        debug_echo "Starting ${app_name}"
+        su --command="launch_app ${app_name}" owner | debug_cat
+        app_pid=$(ps -C ${bin_name} -o pid=)
+        echo "${app_name} ${app_pid}" | debug_tee >> $st_dir/pids.txt
     done
     sleep $WAIT
     ps aux > $st_dir/ps.txt
+    debug_echo "Running dlog"
     dlogutil -d *:D | grep prt_ltime | tee $st_dir/dlog_raw.txt | \
-        awk '{print $7, $12}' | sed -e 's/]//' > $st_dir/dlog.txt
+        awk '{print $7, $12}' | sed -e 's/]//' | \
+        debug_tee > $st_dir/dlog.txt
+    debug_echo "Done dlog"
+    if [ ! -f ${st_dir}/dlog.txt ]; then
+        debug_echo "Didn't create dlog stats. Trying to reboot"
+        systemctl reboot
+    fi
+    ls $st_dir | debug_cat
 }
 
 function clear_cache() {
@@ -94,14 +148,16 @@ function clear_cache() {
 }
 
 cd $WD
-if [ -f counter.txt ]; then
-    update_counter
+SERVER=$(cat debug-server.txt)
 
+if [ -f downcounter.txt ]; then
+    ./wait_cancel.sh &
+    load_counter
     startup_stat
     launch_stat
-
-    check_counter
+    update_counter
 else
     startup_init
 fi
+debug_echo "Rebooting"
 sync; systemctl reboot
