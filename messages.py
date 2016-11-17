@@ -46,7 +46,10 @@ def recv_wait():
     sock.send(request)
 
 if cmd == 'echo':
-    send_message(sys.argv[3])
+    send_message(sys.argv[3] + '\n')
+elif cmd == 'cat':
+    raw = sys.stdin.read()
+    send_raw(raw)
 elif cmd == 'tee':
     raw = sys.stdin.read()
     send_raw(raw)
@@ -68,5 +71,5 @@ elif cmd == 'wait':
     subscribe()
     while True:
         recv_wait()
-        if wait_of == recv_message():
+        if wait_of == recv_message().strip():
             break
