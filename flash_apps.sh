@@ -24,6 +24,7 @@ function flash_apps {
     unzip apps.zip -d $td
     pushd $td/exampleApp-master
     message "Pushing apps to odroid..."
+    sed -i 's/.*reboot.*//' ./patch-demo
     sudo ./patch-demo
     popd
     popd
