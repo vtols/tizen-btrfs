@@ -1,7 +1,7 @@
 #!/bin/bash
 
 WD=/opt/usr/home/owner
-DELAY=20
+DELAY=10
 WAIT=30
 COUNT=$1
 DEBUG=1
@@ -11,14 +11,15 @@ unit_prefix=/etc/systemd/system
 unit_path=${unit_prefix}/${unit}
 
 function update_counter() {
+    echo $NEW_COUNTER > counter.txt
     if [ $NEW_DOWN_COUNTER -le 0 ]; then
+        debug_echo "Disable unit"
         systemctl disable $unit
         rm downcounter.txt $unit_path startup.sh
         chown -R owner:users startup
         make_archive
         exit
     fi
-    echo $NEW_COUNTER > counter.txt
     echo $NEW_DOWN_COUNTER > downcounter.txt
 }
 
@@ -64,21 +65,34 @@ function startup_stat() {
     debug_echo ----------
     debug_echo \#$COUNTER
     debug_echo "Left ${DOWN_COUNTER}"
-    # systemd-analyze 2>&1 | debug_tee
-    systemd-analyze | awk '{print $4,$7,$10}' | \
-        sed -e 's/s//g' | debug_tee > $st_dir/startup.txt
+    while true; do
+        systemd-analyze | awk '{print $4,$7,$10}' | \
+            sed -e 's/s//g' | debug_tee > $st_dir/startup.txt
 
-    systemd-analyze plot > $st_dir/plot.svg
+        systemd-analyze plot > $st_dir/plot.svg
+        if [ ! -f $st_dir/startup.txt ]; then
+            debug_echo "Didn't create startup stat. Trying to reboot"
+            systemctl reboot
+        fi
+
+        if [ -s $st_dir/startup.txt ]; then
+            break
+        fi
+        debug_echo "Boot is not finished yet or error occured."
+        sleep 1
+    done
 
     dmesg > $st_dir/dmesg.txt
 }
 
 function startup_init() {
     if [ ! -f counter.txt ]; then
+        debug_echo "New counter"
         echo 1 > counter.txt
         rm -rf startup
     fi
 
+    debug_echo "New downcounter"
     echo $COUNT > downcounter.txt
 
 
@@ -88,13 +102,16 @@ function startup_init() {
 
 [Unit]
 Description=Systemd startup analysis
+Requires=default.target
+#Requires=network-online.target
 
 [Service]
 ExecStart=/opt/usr/home/owner/startup.sh
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 EOF
+    debug_echo "Enable unit"
     systemctl enable $unit
 }
 
@@ -136,7 +153,7 @@ function launch_stat() {
         awk '{print $7, $12}' | sed -e 's/]//' | \
         debug_tee > $st_dir/dlog.txt
     debug_echo "Done dlog"
-    if [ ! -f ${st_dir}/dlog.txt ]; then
+    if [ ! -f ${st_dir}/dlog.txt ] || [ ! -s ${st_dir}/dlog.txt ]; then
         debug_echo "Didn't create dlog stats. Trying to reboot"
         systemctl reboot
     fi
@@ -151,10 +168,17 @@ cd $WD
 SERVER=$(cat debug-server.txt)
 
 if [ -f downcounter.txt ]; then
-    ./wait_cancel.sh &
+    if [ $DEBUG ]; then
+        ./wait_cancel.sh &
+    fi
+
+    debug_echo "Load counter"
     load_counter
+    debug_echo "Startup stat"
     startup_stat
+    debug_echo "Apps stat"
     launch_stat
+    debug_echo "Update counter"
     update_counter
 else
     startup_init
