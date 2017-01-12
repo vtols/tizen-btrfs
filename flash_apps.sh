@@ -17,6 +17,15 @@ function download_archives() {
     popd
 }
 
+function install_tool() {
+    message "Installing systemd-analyze..."
+    pushd $ARCHIVES
+    sdb root on
+    sdb push systemd-analyze-*.rpm /tmp
+    sdb shell rpm -iv /tmp/systemd-analyze-*.rpm
+    popd
+}
+
 function flash_apps {
     td=$(mktemp -d -p $ARCHIVES)
     message "Unpacking apps..."
@@ -46,5 +55,6 @@ function flash_drivers {
 
 
 download_archives
+install_tool
 flash_apps
 flash_drivers

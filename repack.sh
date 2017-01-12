@@ -74,7 +74,7 @@ EOF
         message "Written auxiliary script"
         cat dst_mnt/sbin/btrfs_resize
 
-        message "Install btrfs tool from file ${2}"
+        message "Install btrfs tool from file"
         #Btrfs executable for armv7l from btrfs-progs
         cp ${workdir}/btrfs dst_mnt/sbin
     fi

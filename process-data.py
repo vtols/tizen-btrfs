@@ -8,15 +8,29 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 from pathlib import Path
 
-def plot_medians(name, y):
-    median = np.median(y)
+def plot_stats(name, y):
+    stats = [mean, median, variance] = \
+        [np.mean(y), np.median(y), np.var(y)]
+
+    for stat_file, stat in zip(stat_files, stats):
+        with stat_file.open('a') as f:
+            f.write("{} {}\n".format(name, stat))
+
     x = list(range(len(y)))
+    y_mean = [mean for i in x]
     y_median = [median for i in x]
     fig, ax = plt.subplots()
-    data_line = ax.plot(x, y, 'o', label='Time')
-    median_line = ax.plot(x, y_median, label='Median time', linestyle='-')
+    data_line = ax.plot(x, y, 'o', label='Time', alpha=0.2)
+    mean_line, = ax.plot(x, y_mean, label='Mean time',
+                    linestyle='-', color='red', linewidth=2)
+    median_line, = ax.plot(x, y_median, label='Median time',
+                    linestyle='-', color='orange', linewidth=2)
+    plt.legend([mean_line, median_line], ['Mean', 'Median'])
+    plt.xlim([min(x), max(x)])
     plt.title(name)
-    plt.savefig(str(data_dir / (name + '.png')))
+    file_t = str(data_dir / (name + '.{}'))
+    plt.savefig(file_t.format('png'))
+    plt.savefig(file_t.format('svg'))
     #plt.show()
 
 def plot_density(name, y):
@@ -33,11 +47,19 @@ def entry_map(name):
     return { k: v for [k, v] in entries(name) }
 
 data_dir = Path.cwd() / sys.argv[1]
+medians = data_dir / 'medians.txt'
+means = data_dir / 'means.txt'
+variances = data_dir / 'variances.txt'
+stat_files = [means, medians, variances]
 
 system_start_time = []
 apps_start_time = defaultdict(lambda: [])
 
 samples = 0
+
+for stat_file in stat_files:
+    if stat_file.exists():
+        os.remove(str(stat_file))
 
 for run_dir in data_dir.iterdir():
 
@@ -58,8 +80,8 @@ for run_dir in data_dir.iterdir():
 
 print("Total {} samples".format(samples))
 
-plot_medians('sys', system_start_time)
+plot_stats('sys', system_start_time)
 for name, data in apps_start_time.items():
     print("Plotting data for", name)
-    plot_medians(name, data)
+    plot_stats(name, data)
     plot_density(name, data)
